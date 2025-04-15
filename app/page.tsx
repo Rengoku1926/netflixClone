@@ -1,28 +1,35 @@
-// File: app/page.tsx
 import MovieBanner from '@/components/MovieBanner';
-import MovieCard from '@/components/MovieCard';
 import MovieRow from '@/components/MovieRow';
+import MovieSearch from '@/components/MovieSearch';
 import { ThemeProvider } from '@/components/theme-provider';
 import { MovieType } from '@/types/movie';
+import {movies as allMovies} from '@/data/data'
 
-async function getMovies() {
-  const res = await fetch('https://www.freetestapi.com/api/v1/movies', { next: { revalidate: 3600 } });
+// async function getMovies() {
+//   const res = await fetch('https://www.freetestapi.com/api/v1/movies', {
+//     next: { revalidate: 3600 },
+//   });
+//   if (!res.ok) {
+//     throw new Error('Failed to fetch movies');
+//   }
+//   return res.json();
+// }
 
-  if (!res.ok) {
-    throw new Error('Failed to fetch movies');
-  }
-
-  return res.json();
-}
-
-export default async function Home() {
-  const movies: MovieType[] = await getMovies();
-
-  // Get an array of 5 featured movies for the carousel
+export default async function Home({
+  searchParams,
+}: {
+  searchParams: any; // searchParams might be a promise or a plain object
+}) {
+  const movies: MovieType[] = allMovies;
   const featuredMovies = movies.slice(0, 5);
-
-  // Group movies by genre
   const genres = [...new Set(movies.flatMap(movie => movie.genre))];
+
+  const resolvedSearchParams = await Promise.resolve(searchParams);
+
+  const query =
+    typeof resolvedSearchParams.get === 'function'
+      ? resolvedSearchParams.get('q') || ''
+      : resolvedSearchParams.q || '';
 
   return (
     <ThemeProvider
@@ -38,15 +45,40 @@ export default async function Home() {
             <div className="flex items-center space-x-8">
               <h1 className="text-2xl font-bold text-red-600">NETFLIX</h1>
               <div className="hidden md:flex space-x-6">
-                <a href="#" className="text-sm font-medium hover:text-gray-300">Home</a>
-                <a href="#" className="text-sm font-medium hover:text-gray-300">TV Shows</a>
-                <a href="#" className="text-sm font-medium hover:text-gray-300">Movies</a>
-                <a href="#" className="text-sm font-medium hover:text-gray-300">New & Popular</a>
-                <a href="#" className="text-sm font-medium hover:text-gray-300">My List</a>
+                <a href="/" className="text-sm font-medium hover:text-gray-300">
+                  Home
+                </a>
+                <a href="/tv-shows" className="text-sm font-medium hover:text-gray-300">
+                  TV Shows
+                </a>
+                <a href="/movies" className="text-sm font-medium hover:text-gray-300">
+                  Movies
+                </a>
+                <a href="/new-popular" className="text-sm font-medium hover:text-gray-300">
+                  New &amp; Popular
+                </a>
+                <a href="/my-list" className="text-sm font-medium hover:text-gray-300">
+                  My List
+                </a>
               </div>
             </div>
             <div className="flex items-center space-x-4">
-              <button className="hidden sm:block text-sm">Search</button>
+              {/* Search Form */}
+              <form method="get" action="/" className="flex">
+                <input
+                  type="text"
+                  name="q"
+                  defaultValue={query}
+                  placeholder="Search movies..."
+                  className="text-sm px-2 py-1 rounded bg-gray-800 text-white"
+                />
+                <button
+                  type="submit"
+                  className="ml-2 px-3 py-1 bg-red-600 text-white rounded hover:bg-red-500"
+                >
+                  Search
+                </button>
+              </form>
               <div className="h-8 w-8 rounded-full bg-red-600"></div>
             </div>
           </div>
@@ -55,22 +87,24 @@ export default async function Home() {
         {/* Featured Movie Carousel */}
         <MovieBanner featuredMovies={featuredMovies} />
 
+        {/* Render Search Results if query exists */}
+        {query && <MovieSearch movies={movies} query={query} />}
+
         {/* Movie Rows by Genre */}
-        <div className="mt-4 space-y-8 pb-16">
+        <section className="mt-4 space-y-8 pb-16 px-4">
           {genres.map((genre) => {
             const genreMovies = movies.filter(movie => movie.genre.includes(genre));
-            if (genreMovies.length > 0) {
-              return <MovieRow key={genre} title={genre} movies={genreMovies} />;
-            }
-            return null;
+            return genreMovies.length > 0 ? (
+              <MovieRow key={genre} title={genre} movies={genreMovies} />
+            ) : null;
           })}
-          
+
           {/* Top Rated Movies */}
-          <MovieRow 
-            title="Top Rated" 
-            movies={[...movies].sort((a, b) => b.rating - a.rating).slice(0, 10)} 
+          <MovieRow
+            title="Top Rated"
+            movies={[...movies].sort((a, b) => b.rating - a.rating).slice(0, 10)}
           />
-        </div>
+        </section>
       </main>
     </ThemeProvider>
   );

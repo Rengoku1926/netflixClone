@@ -6,28 +6,22 @@ import { MovieType } from "@/types/movie";
 import { Play, ArrowLeft, Star } from "lucide-react";
 import { ThemeProvider } from "@/components/theme-provider";
 import { notFound } from "next/navigation";
+import { movies as allMovies } from "@/data/data";
 
 async function getMovie(id: string) {
   try {
-    // First try to fetch all movies
-    const res = await fetch("https://www.freetestapi.com/api/v1/movies", {
-      next: { revalidate: 3600 },
-    });
-
-    if (!res.ok) {
-      throw new Error("Failed to fetch movies");
-    }
-
-    const movies: MovieType[] = await res.json();
-
+    // const res = await fetch("https://www.freetestapi.com/api/v1/movies", {
+    //   next: { revalidate: 3600 },
+    // });
+    // if (!res.ok) {
+    //   throw new Error("Failed to fetch movies");
+    // }
+    // const movies: MovieType[] = await res.json();
     // Find the specific movie by ID
-    const movie = movies.find((m) => m.id.toString() === id);
 
-    if (!movie) {
-      return null;
-    }
+    const movie = allMovies.find((m) => m.id.toString() === id);
+    return movie || null;
 
-    return movie;
   } catch (error) {
     console.error("Error fetching movie:", error);
     return null;
