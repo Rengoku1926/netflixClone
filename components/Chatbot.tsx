@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import React, { useState } from "react"
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog"
 import { Textarea } from "@/components/ui/textarea"
 import { Button } from "@/components/ui/button"
@@ -8,6 +8,55 @@ import { Button } from "@/components/ui/button"
 interface Message {
   role: "user" | "bot"
   content: string
+}
+
+// Helper to parse custom markers:
+// - "* " lines become new lines
+// - "**text**" renders underlined text
+const parseContent = (content: string) => {
+  // Split off any '* ' bullets and ignore empty segments
+  const lines = content.split("* ").filter((line) => line.trim() !== "")
+
+  return lines.flatMap((line, idx) => {
+    const segments: React.ReactNode[] = []
+    const underlineRegex = /\*\*(.*?)\*\*/g
+    let lastIndex = 0
+    let match: RegExpExecArray | null
+    let subIdx = 0
+
+    // Process underline markers
+    while ((match = underlineRegex.exec(line)) !== null) {
+      const [fullMatch, text] = match
+      const index = match.index
+      // text before the underlined part
+      if (index > lastIndex) {
+        segments.push(
+          <span key={`text-${idx}-${subIdx}`}>{line.slice(lastIndex, index)}</span>
+        )
+        subIdx++
+      }
+      // underlined text
+      segments.push(
+        <u key={`uline-${idx}-${subIdx}`}>{text}</u>
+      )
+      subIdx++
+      lastIndex = index + fullMatch.length
+    }
+
+    // remaining text after last underline
+    if (lastIndex < line.length) {
+      segments.push(
+        <span key={`text-end-${idx}`}>{line.slice(lastIndex)}</span>
+      )
+    }
+
+    // add line break after each line except last
+    if (idx < lines.length - 1) {
+      segments.push(<br key={`br-${idx}`} />)
+    }
+
+    return segments
+  })
 }
 
 export default function Chatbot() {
@@ -19,7 +68,7 @@ export default function Chatbot() {
     if (!input.trim()) return
 
     const userMessage: Message = { role: "user", content: input }
-    setMessages([...messages, userMessage])
+    setMessages((prev) => [...prev, userMessage])
     setInput("")
     setLoading(true)
 
@@ -53,10 +102,15 @@ export default function Chatbot() {
               <div
                 key={idx}
                 className={`text-sm p-2 rounded-md text-black ${
-                  msg.role === "user" ? "bg-red-100 text-right" : "bg-gray-100 text-left"
+                  msg.role === "user"
+                    ? "bg-red-100 text-right"
+                    : "bg-gray-100 text-left"
                 }`}
               >
-                <p><strong>{msg.role === "user" ? "You" : "Bot"}:</strong> {msg.content}</p>
+                <p><strong>{msg.role === "user" ? "You" : "Bot"}:</strong></p>
+                <div className="whitespace-pre-line">
+                  {parseContent(msg.content)}
+                </div>
               </div>
             ))}
           </div>
